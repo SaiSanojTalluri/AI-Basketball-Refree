@@ -14,8 +14,8 @@ singlestore_db = database.SingleStoreDatabase(
 class DoubleDribbleDetector:
     def __init__(self):
         # Initialize YOLO models for pose and ball detection
-        self.pose_model = YOLO("yolov8s-pose.pt")
-        self.ball_model = YOLO("basketballModel.pt")
+        self.pose_model = YOLO("C:/Users/saisa/Desktop/AI-Basketball-Referee/basketballModel.pt")
+        self.ball_model = YOLO("C:/Users/saisa/Desktop/AI-Basketball-Referee/yolov8s-pose.pt")
         # Initialize video capture from default camera
         self.cap = cv2.VideoCapture(0)
         # Define indices for left and right wrists in pose model

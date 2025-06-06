@@ -3,71 +3,75 @@ from ultralytics import YOLO
 import numpy as np
 import time
 
-
 class BallHoldingDetector:
     def __init__(self):
         # Load the YOLO models for pose estimation and ball detection
         self.pose_model = YOLO("yolov8s-pose.pt")
         self.ball_model = YOLO("basketballModel.pt")
 
-        # Open the webcam
-        self.cap = cv2.VideoCapture(0)
+        # Open the webcam or video
+        self.cap = cv2.VideoCapture("C:/Users/saisa/Desktop/AI-Basketball-Referee/video2.mp4")
 
-        # Define the body part indices. Switch left and right to account for the mirrored image.
+        # Define the body part indices (switch left and right for mirrored image)
         self.body_index = {
             "left_wrist": 10,  # switched
             "right_wrist": 9,  # switched
         }
 
-        # Initialize variables to store the hold start time and the hold flag
+        # Holding state variables
         self.hold_start_time = None
         self.is_holding = False
 
-        # Define the holding duration (in seconds)
+        # Holding duration threshold (in seconds)
         self.hold_duration = 0.85
 
-        # Threshold for the distance to be considered as holding
+        # Distance threshold to consider the ball is being held
         self.hold_threshold = 300
 
     def run(self):
-        # Process frames from the webcam until the user quits
         while self.cap.isOpened():
             success, frame = self.cap.read()
 
             if success:
-                # Process the current frame
                 pose_annotated_frame, ball_detected = self.process_frame(frame)
 
-                # Display the annotated frame
-                cv2.imshow("YOLOv8 Inference", pose_annotated_frame)
+                # Resize to 70%
+                scale_percent = 70  # percent of original size
+                width = int(pose_annotated_frame.shape[1] * scale_percent / 100)
+                height = int(pose_annotated_frame.shape[0] * scale_percent / 100)
+                dim = (width, height)
+                resized_frame = cv2.resize(pose_annotated_frame, dim, interpolation=cv2.INTER_AREA)
+
+                cv2.imshow("YOLOv8 Inference", resized_frame)
 
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
             else:
                 break
 
-        # Release the webcam and destroy the windows
         self.cap.release()
         cv2.destroyAllWindows()
 
     def process_frame(self, frame):
-        # Perform pose estimation on the frame
+        # Pose estimation
         pose_results = self.pose_model(frame, verbose=False, conf=0.5)
         pose_annotated_frame = pose_results[0].plot()
-        rounded_results = np.round(pose_results[0].keypoints.numpy(), 1)
 
-        try:
-            # Get the keypoints for the body parts
-            left_wrist = rounded_results[0][self.body_index["left_wrist"]]
-            right_wrist = rounded_results[0][self.body_index["right_wrist"]]
-        except:
+        # Extract keypoints safely
+        keypoints = pose_results[0].keypoints.xy  # (num_persons, num_keypoints, 2)
+
+        if keypoints.shape[0] == 0:
             print("No human detected.")
             return pose_annotated_frame, False
 
-        # Perform ball detection on the frame
-        ball_results_list = self.ball_model(frame, verbose=False, conf=0.65)
+        # For first detected person
+        rounded_results = np.round(keypoints[0].cpu().numpy(), 1)
 
-        # Set the ball detection flag to False before the detection
+        left_wrist = rounded_results[self.body_index["left_wrist"]]
+        right_wrist = rounded_results[self.body_index["right_wrist"]]
+
+        # Ball detection
+        ball_results_list = self.ball_model(frame, verbose=False, conf=0.65)
         ball_detected = False
 
         for ball_results in ball_results_list:
@@ -76,31 +80,21 @@ class BallHoldingDetector:
                 ball_x_center = (x1 + x2) / 2
                 ball_y_center = (y1 + y2) / 2
 
-                print(
-                    f"Ball coordinates: (x={ball_x_center:.2f}, y={ball_y_center:.2f})"
-                )
-
-                # Update the ball detection flag to True when the ball is detected
+                print(f"Ball coordinates: (x={ball_x_center:.2f}, y={ball_y_center:.2f})")
                 ball_detected = True
 
-                # Calculate distances between the ball and the wrists
-                left_distance = np.hypot(
-                    ball_x_center - left_wrist[0], ball_y_center - left_wrist[1]
-                )
-                right_distance = np.hypot(
-                    ball_x_center - right_wrist[0], ball_y_center - right_wrist[1]
-                )
+                left_distance = np.hypot(ball_x_center - left_wrist[0], ball_y_center - left_wrist[1])
+                right_distance = np.hypot(ball_x_center - right_wrist[0], ball_y_center - right_wrist[1])
 
-                # Check if the ball is being held
                 self.check_holding(left_distance, right_distance)
 
-                # Annotate ball detection on the pose estimation frame
+                # Annotate ball detection
                 cv2.rectangle(
                     pose_annotated_frame,
                     (int(x1), int(y1)),
                     (int(x2), int(y2)),
                     (0, 255, 0),
-                    2,
+                    2
                 )
                 cv2.putText(
                     pose_annotated_frame,
@@ -109,8 +103,7 @@ class BallHoldingDetector:
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
                     (0, 0, 0),
-                    2,
-                    cv2.LINE_AA,
+                    2
                 )
                 cv2.putText(
                     pose_annotated_frame,
@@ -119,8 +112,7 @@ class BallHoldingDetector:
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
                     (0, 0, 0),
-                    2,
-                    cv2.LINE_AA,
+                    2
                 )
                 cv2.putText(
                     pose_annotated_frame,
@@ -129,8 +121,7 @@ class BallHoldingDetector:
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
                     (0, 0, 0),
-                    2,
-                    cv2.LINE_AA,
+                    2
                 )
                 cv2.putText(
                     pose_annotated_frame,
@@ -139,8 +130,7 @@ class BallHoldingDetector:
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
                     (0, 0, 0),
-                    2,
-                    cv2.LINE_AA,
+                    2
                 )
                 cv2.putText(
                     pose_annotated_frame,
@@ -149,20 +139,15 @@ class BallHoldingDetector:
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
                     (0, 0, 0),
-                    2,
-                    cv2.LINE_AA,
+                    2
                 )
 
-                # Apply a blue tint if the ball is being held
                 if self.is_holding:
-                    blue_tint = np.full_like(
-                        pose_annotated_frame, (255, 0, 0), dtype=np.uint8
-                    )
+                    blue_tint = np.full_like(pose_annotated_frame, (255, 0, 0), dtype=np.uint8)
                     pose_annotated_frame = cv2.addWeighted(
                         pose_annotated_frame, 0.7, blue_tint, 0.3, 0
                     )
 
-        # If the ball is not detected in the frame, reset the timer and the holding flag
         if not ball_detected:
             self.hold_start_time = None
             self.is_holding = False
@@ -182,7 +167,6 @@ class BallHoldingDetector:
         else:
             self.hold_start_time = None
             self.is_holding = False
-
 
 if __name__ == "__main__":
     ball_detection = BallHoldingDetector()
