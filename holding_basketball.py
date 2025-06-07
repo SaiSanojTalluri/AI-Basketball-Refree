@@ -6,8 +6,8 @@ import time
 class BallHoldingDetector:
     def __init__(self):
         # Load the YOLO models for pose estimation and ball detection
-        self.pose_model = YOLO("yolov8s-pose.pt")
-        self.ball_model = YOLO("basketballModel.pt")
+        self.pose_model = YOLO("C:/Users/saisa/Desktop/AI-Basketball-Referee/yolov8s-pose.pt")
+        self.ball_model = YOLO("C:/Users/saisa/Desktop/AI-Basketball-Referee/basketballModel.pt")
 
         # Open the webcam or video
         self.cap = cv2.VideoCapture("C:/Users/saisa/Desktop/AI-Basketball-Referee/video2.mp4")
@@ -23,7 +23,7 @@ class BallHoldingDetector:
         self.is_holding = False
 
         # Holding duration threshold (in seconds)
-        self.hold_duration = 0.85
+        self.hold_duration = 1.75
 
         # Distance threshold to consider the ball is being held
         self.hold_threshold = 300

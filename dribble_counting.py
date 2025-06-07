@@ -86,7 +86,6 @@ class DribbleCounter:
 
             self.prev_delta_y = delta_y
 
-
 if __name__ == "__main__":
     dribble_counter = DribbleCounter()
     dribble_counter.run()
